@@ -22,6 +22,9 @@ dhcp
 kernel %s %s collins_url=%s collins_user=%s collins_password=%s collins_tag=%s
 initrd %s
 boot || shell`
+	configLocalBoot = `#!ipxe
+sanboot --no-describe --drive 0x80
+`
 )
 
 var (
@@ -76,6 +79,10 @@ func isRegisterState(asset *collins.Asset) bool {
 
 func isInstallState(asset *collins.Asset) bool {
 	return asset.Data.Asset.Status == "Provisioning"
+}
+
+func isProvisionedState(asset *collins.Asset) bool {
+	return asset.Data.Asset.Status == "Provisioned"
 }
 
 func findPool(addrs *collins.AssetAddresses) (collins.AssetAddress, error) {
@@ -212,6 +219,9 @@ func handlePxe(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case isRegisterState(asset):
 		fmt.Fprintf(w, fmt.Sprintf(configRegistration, *kernel, *kopts, *uri, *user, *password, name, *initrd))
+
+	case isProvisionedState(asset):
+		fmt.Fprintf(w, fmt.Sprint(configLocalBoot))
 
 	case isInstallState(asset):
 		configAsset, err := getConfig(asset)
